@@ -27,6 +27,7 @@ namespace MapRender
     {
         public static HarmonyMod Main;
         public MapRender Instance;
+        public Toggle toggle;
         public Config config;
         public string Status;
         public string ConfigFile;
@@ -37,7 +38,7 @@ namespace MapRender
  / /  / / /_/ / /_/ / _, _/  __/ / / / /_/ /  __/ /    
 /_/  /_/\__,_/ .___/_/ |_|\___/_/ /_/\__,_/\___/_/     
             /_/
-V1.1.0 by bmgjet";
+V1.2.0 by bmgjet";
 
         public string HelpInfo = @"MapRender Help:
 Console Commands:
@@ -56,6 +57,8 @@ Hotkeys:
         {
             Main = this; //Create static reference
             LoadConfig(); //Load/Create Config
+            toggle = MenuManager.Instance.CreateWindowToggle("HarmonyMods//MapRender.png");
+            toggle.onValueChanged.AddListener((value) => CreateWindow(value));
         }
 
         //OnUnloaded called by harmony when plugin unloads
@@ -79,9 +82,7 @@ Hotkeys:
                             try
                             {
                                 __instance.Post("Creating MapRender");
-                                Main.Instance = new MapRender().Init();
-                                if (Main.Instance != null) { Main.Instance.Render(); }
-                                else { __instance.Post("Failed To Create Map, Is One Loaded?"); }
+                                CreateWindow(true);
                             }
                             catch (Exception e) { __instance.Post(e.ToString()); }
                             __instance.consoleInput.text = string.Empty; //Blank console text input
@@ -137,8 +138,7 @@ Hotkeys:
                     }
                     if (!LoadScreen.Instance.isEnabled && Keyboard.current.ctrlKey.isPressed && Keyboard.current.mKey.wasPressedThisFrame) //CTRL+M keys While Not In Loading Screen
                     {
-                        Main.Instance = new MapRender().Init();
-                        if (Main.Instance != null) { Main.Instance.Render(); }
+                        CreateWindow(true);
                         return false; //Block Original Code
                     }
                 }
@@ -329,6 +329,17 @@ Hotkeys:
             config.MonumentMarkerNames = monumentMarkers.Select(m => $"{m.Id};{m.Name.ToUpper()};10").ToArray();
         }
         #endregion
+
+        public static void CreateWindow(bool togglevalue)
+        {
+            if(Main.Instance != null || togglevalue == false) { 
+                Main.Instance.CloseWindow();
+                return;
+            }
+            Main.Instance = new MapRender().Init();
+            if (Main.Instance != null) { Main.Instance.Render(); }
+            else { if (ConsoleWindow.Instance != null) { ConsoleWindow.Instance.Post("Failed To Create Map, Is One Loaded?"); } }
+        }
     }
 
     public class MapRender
@@ -725,6 +736,10 @@ Hotkeys:
             LoadScreen.Instance.isEnabled = false; //Allow Key/Mouse Input On RustMapper
             Compass.Instance.transform.position -= (Compass.Instance.transform.up * 500); //Restore compass position
             HarmonyMod.Main.Instance = null;
+            if(HarmonyMod.Main.toggle != null)
+            {
+                HarmonyMod.Main.toggle.isOn = false;
+            }
         }
 
         void CloseSavePopup() { if (inputPopup != null) { GameObject.Destroy(inputPopup); } } //Closes Save popup window
